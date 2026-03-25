@@ -3,6 +3,7 @@ import time
 import json
 import os
 import shutil
+import traceback
 from datetime import datetime
 
 TOKEN = "8017480371:AAELsrLtoA3ONP-8XTQxNJe5mmpvYZ-mxNU"
@@ -37,8 +38,10 @@ def delete_message(chat_id, msg_id):
 def answer_callback(cb_id, text, alert=False):
     return bot("answerCallbackQuery", {"callback_query_id": cb_id, "text": text, "show_alert": alert})
 
-# ============ FAYL ISHLARI ============
+# ============ FAYL ISHLARI (FIXED) ============
 def read_file(path):
+    if not path:
+        return None
     try:
         with open(path, "r", encoding="utf-8") as f:
             return f.read().strip()
@@ -46,12 +49,14 @@ def read_file(path):
         return None
 
 def write_file(path, content):
+    if not path:
+        return
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         f.write(str(content))
 
 def file_exists(path):
-    return os.path.exists(path)
+    return os.path.exists(path) if path else False
 
 def delete_folder(path):
     if os.path.exists(path):
@@ -169,7 +174,7 @@ def get_kurs():
 def save_user(chat_id):
     if not file_exists("azo.dat"):
         write_file("azo.dat", "")
-    data = read_file("azo.dat")
+    data = read_file("azo.dat") or ""
     if str(chat_id) not in data:
         with open("azo.dat", "a", encoding="utf-8") as f:
             f.write(f"{chat_id}\n")
@@ -184,7 +189,7 @@ def joinchat(chat_id):
     lines = kanal.split("\n")
     uns = False
     keyboard = {"inline_keyboard": []}
-    for i, line in enumerate(lines):
+    for line in lines:
         if "-" not in line:
             continue
         name, url = line.split("-")
@@ -234,6 +239,7 @@ user_steps = {}
 temp_data = {}
 
 def handle_message(chat_id, text, username, msg_id):
+    print(f"DEBUG: Xabar keldi: {text}")  # Debug
     if is_banned(chat_id):
         return
     if not joinchat(chat_id):
@@ -354,7 +360,7 @@ def handle_message(chat_id, text, username, msg_id):
 
     elif chat_id == ADMIN_ID:
         if text == "📊 Statistika":
-            users = len(read_file("azo.dat").split("\n")) if file_exists("azo.dat") else 0
+            users = len((read_file("azo.dat") or "").split("\n")) if file_exists("azo.dat") else 0
             exchanges = len(os.listdir("obmen")) if os.path.exists("obmen") else 0
             send_message(chat_id, f"👥 Foydalanuvchilar: {users}\n🔄 Almashuvlar: {exchanges}")
 
@@ -389,7 +395,7 @@ def handle_message(chat_id, text, username, msg_id):
                 del user_steps[chat_id]
 
         elif step == "broadcast":
-            users = read_file("azo.dat").split("\n")
+            users = (read_file("azo.dat") or "").split("\n")
             count = 0
             for uid in users:
                 if uid.strip():
@@ -445,10 +451,10 @@ def handle_callback(cb_id, chat_id, msg_id, data):
         _, from_w, to_w = data.split("_")
         user_w = read_file(f"tizim/hamyon/{chat_id}/{from_w}.txt")
         admin_w = read_file(f"tizim/hamyon/raqam/{ADMIN_ID}/{from_w}.txt")
-        if user_w == "kiritilmagan":
+        if user_w == "kiritilmagan" or not user_w:
             answer_callback(cb_id, f"⚠️ Avval {from_w.upper()} hamyon kiriting!", True)
             return
-        if admin_w == "kiritilmagan":
+        if admin_w == "kiritilmagan" or not admin_w:
             answer_callback(cb_id, "⚠️ Admin hamyoni kiritilmagan!", True)
             return
         edit_message(chat_id, msg_id, f"🔄 {from_w.upper()} > {to_w.upper()}\n\n💳 Siz: {user_w}\n💳 Admin: {admin_w}\n\nSummani kiriting:", json.dumps(back))
@@ -536,7 +542,7 @@ def main():
                     offset = upd["update_id"] + 1
             time.sleep(1)
         except Exception as e:
-            print(f"Xatolik: {e}")
+            print(f"Xatolik: {e}\n{traceback.format_exc()}")
             time.sleep(5)
 
 if __name__ == "__main__":
