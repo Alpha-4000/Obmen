@@ -24,7 +24,10 @@ def send_message(chat_id, text, reply_markup=None):
     data = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
     if reply_markup:
         data["reply_markup"] = reply_markup
-    return bot("sendMessage", data)
+    result = bot("sendMessage", data)
+    if not result.get("ok"):
+        print(f"SendMessage xatolik: {result}")
+    return result
 
 def edit_message(chat_id, msg_id, text, reply_markup=None):
     data = {"chat_id": chat_id, "message_id": msg_id, "text": text, "parse_mode": "HTML"}
@@ -38,7 +41,7 @@ def delete_message(chat_id, msg_id):
 def answer_callback(cb_id, text, alert=False):
     return bot("answerCallbackQuery", {"callback_query_id": cb_id, "text": text, "show_alert": alert})
 
-# ============ FAYL ISHLARI (FIXED) ============
+# ============ FAYL ISHLARI ============
 def read_file(path):
     if not path:
         return None
@@ -239,7 +242,7 @@ user_steps = {}
 temp_data = {}
 
 def handle_message(chat_id, text, username, msg_id):
-    print(f"DEBUG: Xabar keldi: {text}")  # Debug
+    print(f"DEBUG: Xabar keldi: {text} (chat_id={chat_id})")
     if is_banned(chat_id):
         return
     if not joinchat(chat_id):
@@ -303,6 +306,7 @@ def handle_message(chat_id, text, username, msg_id):
         send_message(chat_id, "<b>🔼 Berish va 🔽 Olish valyutalarini tanlang:</b>", json.dumps(keyboard))
 
     elif text == "🗄 Boshqarish" and chat_id == ADMIN_ID:
+        print(f"DEBUG: Admin panel yuborilmoqda, chat_id={chat_id}")
         send_message(chat_id, "<b>Admin paneliga xush kelibsiz!</b>", json.dumps(admin_panel))
         if chat_id in user_steps:
             del user_steps[chat_id]
@@ -417,9 +421,6 @@ def handle_callback(cb_id, chat_id, msg_id, data):
         return
     if not joinchat(chat_id):
         return
-
-    valyuta = get_valyuta()
-    foiz = get_foiz()
 
     if data == "check_sub":
         delete_message(chat_id, msg_id)
